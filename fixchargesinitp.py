@@ -39,7 +39,7 @@
 # This is written to work with python 3.4 because it should be good to
 # be working on the newest version of python.
 
-import fileinput  # allows easy interation over a file
+import fileinput  # allows easy iteration over a file
 import sys        # For importing the arguments given
 import re         # RegEx package for sorting data
 
