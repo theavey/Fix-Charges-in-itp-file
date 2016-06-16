@@ -32,9 +32,13 @@
 # replaced. It will generate a backup file *GMX.itp.bak that is the
 # original file without any edits.
 
-# Note, this is not written to accomodate three character atom names
-# so molecules with more than 100 atoms may cause issues as this is
-# currently implemented. (shouldn't be hard to fix, though)
+# This should work with up to 1000 atoms of any type, assuming the
+# alignment of the columns does not change. I specify the exact
+# spot in the columns to look for atoms names, so if those change,
+# that issue will need to be address.
+
+# Also, if the search for matching atom names is case sensitive, so
+# be aware of that if your case changes, which may happen automatically.
 
 # This is written to work with python 3.4 because it should be good to
 # be working on the newest version of python.
@@ -52,9 +56,9 @@ charge_list = {}
 
 for line in fileinput.input(charge_from):
     if line.startswith('ATOM'):
-        linelist = re.split(' {1,}',line)
+        linelist = re.split(' +', line)
         # print(linelist)
-        charge_list.update({linelist[2]:linelist[8]})
+        charge_list.update({linelist[2]: linelist[7]})
 
 print('{} charges taken from {}'.format(len(charge_list), charge_from))
 
@@ -87,21 +91,23 @@ for line in fileinput.input(charge_to, inplace=1, backup='.bak'):
         #sys.stderr.write(str(line))
         try:
             # Read atom name from this line
-            atom_name   = line[26:29]
+            atom_name = line[24:29].strip()
             # Get atom's proper charge from the dict made above.
             # This is made a string of len 9 (which is the same len
             # as what it will be replacing).
-            charge      = format(charge_list[atom_name],'>9')
+            charge = format(charge_list[atom_name], '>9')
         # Some atom names are only 2 characters, so, the space in the
         # atom name would not be properly recognized by the dict.
         # If a key is not recognized, it will attempt to take off the
         # first character of the atom name (probably a space) and try
         # again.
         except(KeyError):
-            sys.stderr.write('Checking for two character atom name. KeyError was')
-            sys.stderr.write(' raised. atom_name was "{}"\n'.format(atom_name))
-            charge      = format(charge_list[atom_name[1:]],'>9')
-        # Create new_line from parts the current charge with the correct charge.
+            sys.stderr.write('KeyError was raised.')
+            sys.stderr.write('atom_name that was not found is \
+                "{}"\n'.format(atom_name))
+            raise KeyError
+        # Create new_line from old parts, replacing the current
+        # charge with the correct charge.
         new_line = "".join([line[0:38], charge, line[47:]])
         # Print the line back to the file.
         sys.stdout.write(new_line)
@@ -111,3 +117,6 @@ for line in fileinput.input(charge_to, inplace=1, backup='.bak'):
 fileinput.close()
 
 print('{} lines replaced in file {}'.format(lines_written, charge_to))
+if not lines_written == len(charge_list):
+    print('Number of charges found and written are not equal.\n' +
+          'This is likely a problem and you should check your files.')
